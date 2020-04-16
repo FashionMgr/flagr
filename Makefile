@@ -28,17 +28,22 @@ build_ui:
 	@echo "Building Flagr UI ..."
 	@cd ./browser/flagr-ui/; npm install && npm run build
 
+run_ui:
+	@cd ./browser/flagr-ui/; npm run serve
+
 run:
 	@$(PWD)/flagr --port 18000
 
+start:
+	$(MAKE) -j run run_ui
+
 gen: api_docs swagger
 
-deps: checks
+deps:
 	@GO111MODULE=off go get -u github.com/myitcv/gobin
-	@gobin github.com/go-swagger/go-swagger/cmd/swagger@v0.21.0
+	@gobin github.com/go-swagger/go-swagger/cmd/swagger@v0.23.0
 	@gobin github.com/codeskyblue/fswatch
-	@gobin github.com/golangci/golangci-lint/cmd/golangci-lint
-	@echo "Sqlite3" && sqlite3 -version
+	@gobin github.com/golangci/golangci-lint/cmd/golangci-lint@v1.24.0
 
 watch:
 	@fswatch
@@ -54,10 +59,6 @@ serve_docs:
 api_docs:
 	@echo "Installing swagger-merger" && npm install swagger-merger -g
 	@swagger-merger -i $(PWD)/swagger/index.yaml -o $(PWD)/docs/api_docs/bundle.yaml
-
-checks:
-	@echo "Check deps"
-	@(env bash $(PWD)/buildscripts/checkdeps.sh)
 
 verifiers: verify_lint verify_swagger
 

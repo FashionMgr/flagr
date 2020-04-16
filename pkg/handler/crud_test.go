@@ -31,15 +31,11 @@ func TestCrudFlags(t *testing.T) {
 		assert.Len(t, res.(*flag.FindFlagsOK).Payload, 0)
 	})
 
-	t.Run("it should be able to create one flag", func(t *testing.T) {
-		res = c.CreateFlag(flag.CreateFlagParams{
-			Body: &models.CreateFlagRequest{
-				Description: util.StringPtr("funny flag"),
-				Key:         "some_random_flag_key",
-			},
-		})
-		assert.NotZero(t, res.(*flag.CreateFlagOK).Payload.ID)
-		assert.Equal(t, "some_random_flag_key", res.(*flag.CreateFlagOK).Payload.Key)
+	c.CreateFlag(flag.CreateFlagParams{
+		Body: &models.CreateFlagRequest{
+			Description: util.StringPtr("funny flag"),
+			Key:         "flag_key_1",
+		},
 	})
 
 	t.Run("it should be able to find some flags after creation", func(t *testing.T) {
@@ -47,10 +43,33 @@ func TestCrudFlags(t *testing.T) {
 		assert.NotZero(t, len(res.(*flag.FindFlagsOK).Payload))
 	})
 
+	t.Run("it should respect the ?enabled query param", func(t *testing.T) {
+		res = c.FindFlags(flag.FindFlagsParams{})
+		allFlags := len(res.(*flag.FindFlagsOK).Payload)
+
+		res = c.FindFlags(flag.FindFlagsParams{
+			Enabled: util.BoolPtr(true),
+		})
+		enabledFlags := len(res.(*flag.FindFlagsOK).Payload)
+
+		res = c.FindFlags(flag.FindFlagsParams{
+			Enabled: util.BoolPtr(false),
+		})
+		disabledFlags := len(res.(*flag.FindFlagsOK).Payload)
+
+		assert.Equal(t, allFlags, enabledFlags+disabledFlags)
+		assert.NotEqual(t, allFlags, enabledFlags)
+	})
+
 	t.Run("it should be able to get the flag after creation", func(t *testing.T) {
 		res = c.GetFlag(flag.GetFlagParams{FlagID: int64(1)})
 		assert.NotZero(t, res.(*flag.GetFlagOK).Payload.ID)
 		assert.NotZero(t, res.(*flag.GetFlagOK).Payload.Key)
+	})
+
+	t.Run("it should return 404 not found if flag is not there", func(t *testing.T) {
+		res = c.GetFlag(flag.GetFlagParams{FlagID: int64(4444444)})
+		assert.NotZero(t, res.(*flag.GetFlagDefault))
 	})
 
 	t.Run("it should be able to get preloaded segments and variants", func(t *testing.T) {
@@ -165,37 +184,6 @@ func TestCrudFlagsWithFailures(t *testing.T) {
 		res = c.FindFlags(flag.FindFlagsParams{})
 		assert.NotZero(t, res.(*flag.FindFlagsDefault).Payload)
 		db.Error = nil
-	})
-
-	t.Run("CreateFlag - got e2r MapFlag error", func(t *testing.T) {
-		defer gostub.StubFunc(&e2rMapFlag, nil, fmt.Errorf("e2r MapFlag error")).Reset()
-		res = c.CreateFlag(flag.CreateFlagParams{
-			Body: &models.CreateFlagRequest{
-				Description: util.StringPtr("funny flag"),
-			},
-		})
-		assert.NotZero(t, res.(*flag.CreateFlagDefault).Payload)
-	})
-
-	t.Run("CreateFlag - db generic error", func(t *testing.T) {
-		db.Error = fmt.Errorf("db generic error")
-		res = c.CreateFlag(flag.CreateFlagParams{
-			Body: &models.CreateFlagRequest{
-				Description: util.StringPtr("funny flag"),
-			},
-		})
-		assert.NotZero(t, res.(*flag.CreateFlagDefault).Payload)
-		db.Error = nil
-	})
-
-	t.Run("CreateFlag - invalid key error", func(t *testing.T) {
-		res = c.CreateFlag(flag.CreateFlagParams{
-			Body: &models.CreateFlagRequest{
-				Description: util.StringPtr(" flag with a space"),
-				Key:         " 1-2-3", // invalid key
-			},
-		})
-		assert.NotZero(t, res.(*flag.CreateFlagDefault).Payload)
 	})
 
 	t.Run("PutFlag - try to update a non-existing flag", func(t *testing.T) {

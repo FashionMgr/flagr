@@ -76,9 +76,10 @@ var Config = struct {
 	SentryDSN     string `env:"FLAGR_SENTRY_DSN" envDefault:""`
 
 	// NewRelicEnabled - enable the NewRelic monitoring for all the endpoints and DB operations
-	NewRelicEnabled bool   `env:"FLAGR_NEWRELIC_ENABLED" envDefault:"false"`
-	NewRelicAppName string `env:"FLAGR_NEWRELIC_NAME" envDefault:"flagr"`
-	NewRelicKey     string `env:"FLAGR_NEWRELIC_KEY" envDefault:""`
+	NewRelicEnabled                   bool   `env:"FLAGR_NEWRELIC_ENABLED" envDefault:"false"`
+	NewRelicDistributedTracingEnabled bool   `env:"FLAGR_NEWRELIC_DISTRIBUTED_TRACING_ENABLED" envDefault:"false"`
+	NewRelicAppName                   string `env:"FLAGR_NEWRELIC_NAME" envDefault:"flagr"`
+	NewRelicKey                       string `env:"FLAGR_NEWRELIC_KEY" envDefault:""`
 
 	// StatsdEnabled - enable statsd metrics for all the endpoints and DB operations
 	StatsdEnabled        bool   `env:"FLAGR_STATSD_ENABLED" envDefault:"false"`
@@ -187,6 +188,13 @@ var Config = struct {
 	// Identify users through headers
 	HeaderAuthEnabled   bool   `env:"FLAGR_HEADER_AUTH_ENABLED" envDefault:"false"`
 	HeaderAuthUserField string `env:"FLAGR_HEADER_AUTH_USER_FIELD" envDefault:"X-Email"`
+
+	// Authenticate with basic auth
+	BasicAuthEnabled              bool     `env:"FLAGR_BASIC_AUTH_ENABLED" envDefault:"false"`
+	BasicAuthUsername             string   `env:"FLAGR_BASIC_AUTH_USERNAME" envDefault:""`
+	BasicAuthPassword             string   `env:"FLAGR_BASIC_AUTH_PASSWORD" envDefault:""`
+	BasicAuthPrefixWhitelistPaths []string `env:"FLAGR_BASIC_AUTH_WHITELIST_PATHS" envDefault:"/api/v1/flags,/api/v1/evaluation" envSeparator:","`
+	BasicAuthExactWhitelistPaths  []string `env:"FLAGR_BASIC_AUTH_EXACT_WHITELIST_PATHS" envDefault:"" envSeparator:","`
 
 	// WebPrefix - base path for web and API
 	// e.g. FLAGR_WEB_PREFIX=/foo

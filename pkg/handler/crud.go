@@ -75,7 +75,7 @@ func (c *crud) FindFlags(params flag.FindFlagsParams) middleware.Responder {
 	q := entity.Flag{}
 
 	if params.Enabled != nil {
-		q.Enabled = *params.Enabled
+		tx = tx.Where("enabled = ?", *params.Enabled)
 	}
 	if params.Description != nil {
 		q.Description = *params.Description
@@ -114,43 +114,20 @@ func (c *crud) FindFlags(params flag.FindFlagsParams) middleware.Responder {
 	return resp
 }
 
-func (c *crud) CreateFlag(params flag.CreateFlagParams) middleware.Responder {
-	f := &entity.Flag{}
-	if params.Body != nil {
-		f.Description = util.SafeString(params.Body.Description)
-		f.CreatedBy = getSubjectFromRequest(params.HTTPRequest)
-
-		key, err := entity.CreateFlagKey(params.Body.Key)
-		if err != nil {
-			return flag.NewCreateFlagDefault(400).WithPayload(
-				ErrorMessage("cannot create flag. %s", err))
-		}
-		f.Key = key
-	}
-	err := getDB().Create(f).Error
-	if err != nil {
-		return flag.NewCreateFlagDefault(500).WithPayload(
-			ErrorMessage("cannot create flag. %s", err))
-	}
-
-	resp := flag.NewCreateFlagOK()
-	payload, err := e2rMapFlag(f)
-	if err != nil {
-		return flag.NewCreateFlagDefault(500).WithPayload(
-			ErrorMessage("cannot map flag. %s", err))
-	}
-	resp.SetPayload(payload)
-
-	entity.SaveFlagSnapshot(getDB(), f.ID, getSubjectFromRequest(params.HTTPRequest))
-	return resp
-}
-
 func (c *crud) GetFlag(params flag.GetFlagParams) middleware.Responder {
 	f := &entity.Flag{}
-	err := entity.PreloadSegmentsVariants(getDB()).First(f, params.FlagID).Error
-	if err != nil {
+	result := entity.PreloadSegmentsVariants(getDB()).First(f, params.FlagID)
+
+	// Flag with given ID doesn't exist, so we 404
+	if result.RecordNotFound() {
 		return flag.NewGetFlagDefault(404).WithPayload(
-			ErrorMessage("cannot find flag %v. %s", params.FlagID, err))
+			ErrorMessage("unable to find flag %v in the database", params.FlagID))
+	}
+
+	// Something else happened, return a 500
+	if err := result.Error; err != nil {
+		return flag.NewGetFlagDefault(500).WithPayload(
+			ErrorMessage("an unknown error occurred while looking up flag %v: %s", params.FlagID, err))
 	}
 
 	resp := flag.NewGetFlagOK()
